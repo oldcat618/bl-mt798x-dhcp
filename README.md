@@ -303,6 +303,9 @@ Only for multi-layout devices
 Set mtdparts environment variable to the partition layout you want to use, and reboot to apply.
 
 ```bash
+# Current method
+setenv mtd_layout <label>
+# legacy method
 setenv mtd_layout_label <label>
 ```
 

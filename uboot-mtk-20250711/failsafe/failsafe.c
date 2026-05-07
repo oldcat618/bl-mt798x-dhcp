@@ -699,11 +699,19 @@ static void result_handler(enum httpd_uri_handler_status status,
 
 		if (upload_data_id == upload_id) {
 #ifdef CONFIG_MEDIATEK_MULTI_MTD_LAYOUT
-			if (mtd_layout_label &&
-					strcmp(get_mtd_layout_label(), mtd_layout_label) != 0) {
-				printf("httpd: saving mtd_layout_label: %s\n", mtd_layout_label);
-				env_set("mtd_layout_label", mtd_layout_label);
-				env_save();
+			if (mtd_layout_label) {
+				const char *cur_layout = get_mtd_layout_label();
+				const char *env_layout = env_get("mtd_layout");
+
+				if (!cur_layout || strcmp(cur_layout, mtd_layout_label) ||
+				    !env_layout || strcmp(env_layout, mtd_layout_label)) {
+					printf("httpd: saving mtd layout: %s\n", mtd_layout_label);
+					env_set("mtd_layout", mtd_layout_label);
+					env_set("mtd_layout_label", mtd_layout_label);
+					env_set("mtdids", NULL);
+					env_set("mtdparts", NULL);
+					env_save();
+				}
 			}
 #endif
 			if (fw_type == FW_TYPE_INITRD)
