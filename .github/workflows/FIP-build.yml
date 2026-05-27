@@ -84,11 +84,6 @@ env:
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
-  # ATF and U-Boot versions mapping/path
-  atf24: atf-20240117-bacca82a8
-  atf25: atf-20250711
-  atf26: atf-20260123
-  uboot25: uboot-mtk-20250711
 
 jobs:
   build:
@@ -132,20 +127,15 @@ jobs:
             ;;
         esac
 
-        # Note: VARIANT is injected into build.sh only for uboot-2025 builds; EXTRA_OPTION applies to all versions
+        # Note: Makefile handles the underlying build command; EXTRA_OPTION still applies to all versions
         FIP_INPUT="$FIP_VERSION_INPUT"
         FIP_INPUT="$(echo "$FIP_INPUT" | tr -d '\r' | sed -e 's/^[[:space:]]*//;s/[[:space:]]*$//')"
         if [[ "$FIP_INPUT" =~ ^(.+)-(mt798[0-9]+)$ ]]; then
           FIP_INPUT="${BASH_REMATCH[1]}"
         fi
-        if [ "$FIP_INPUT" != "all" ]; then
-          if ! echo ",${FIP_INPUT}," | grep -Eq ',(SP1|SP2|2025)(,|$)'; then
-            if [ "$VARIANT_IN" != "default" ] || [ "$EXTRA_IN" != "default" ]; then
-              if [ "$VARIANT_IN" != "default" ]; then
-                echo "Note: current FIP_VERSION=$FIP_INPUT does not include SP1/SP2/2025; VARIANT will be ignored (EXTRA_OPTION still applies)."
-              fi
-            fi
-          fi
+        if [ "$FIP_INPUT" != "all" ] && ! echo ",${FIP_INPUT}," | grep -Eq ',(SP1|SP2|2025)(,|$)'; then
+          echo "Error: unsupported FIP_VERSION '$FIP_INPUT' (supported: 2025/SP1/SP2/all)." >&2
+          exit 1
         fi
 
         if [ "$EXTRA_IN" = "multi_layout" ]; then
@@ -257,60 +247,8 @@ jobs:
           echo "Will parse selected: ${SUPPORTED_VERSIONS[*]}"
         fi
 
-        version_to_dirs() {
-          local v="$1"
-          case "$v" in
-            2025) echo "${{ env.atf25 }}" "${{ env.uboot25 }}" ;;
-            SP1) echo "${{ env.atf24 }}" "${{ env.uboot25 }}" ;;
-            SP2) echo "${{ env.atf26 }}" "${{ env.uboot25 }}" ;;
-            *) echo "" "" ;;
-          esac
-        }
-
-        collect_models() {
-          local atf_dir="$1"
-          local uboot_dir="$2"
-          local atf_list
-          local uboot_list
-          atf_list=$(mktemp)
-          uboot_list=$(mktemp)
-
-          if [ -d "$atf_dir/configs" ]; then
-            find -L "$atf_dir/configs" -maxdepth 1 -type f -name 'mt798*_defconfig' | while read -r f; do
-              base=$(basename "$f")
-              base_no_ext=$(echo "$base" | sed -E 's/_defconfig$//')
-              if [ -n "$base_no_ext" ]; then
-                echo "$base_no_ext" >> "$atf_list"
-              fi
-            done
-          fi
-
-          if [ -d "$uboot_dir/configs" ]; then
-            find -L "$uboot_dir/configs" -maxdepth 1 -type f -name 'mt798*_defconfig' | while read -r f; do
-              base=$(basename "$f")
-              base_no_ext=$(echo "$base" | sed -E 's/_defconfig$//')
-              if [ -n "$base_no_ext" ]; then
-                echo "$base_no_ext" >> "$uboot_list"
-              fi
-            done
-          fi
-
-          if [ -s "$atf_list" ] && [ -s "$uboot_list" ]; then
-            sort -u "$atf_list" > "${atf_list}.sorted"
-            sort -u "$uboot_list" > "${uboot_list}.sorted"
-            comm -12 "${atf_list}.sorted" "${uboot_list}.sorted"
-          fi
-
-          rm -f "$atf_list" "$uboot_list" "${atf_list}.sorted" "${uboot_list}.sorted"
-        }
-
         for version in "${SUPPORTED_VERSIONS[@]}"; do
-          read -r ATF_DIR UBOOT_DIR < <(version_to_dirs "$version")
-          if [ -z "$ATF_DIR" ] || [ -z "$UBOOT_DIR" ]; then
-            echo "Unknown version mapping: $version, skip"
-            continue
-          fi
-          models=$(collect_models "$ATF_DIR" "$UBOOT_DIR" || true)
+          models=$(make -s board-configs VERSION="$version" || true)
           if [ -z "$models" ]; then
             echo "No available models found for $version: missing ATF/UBoot defconfig intersection, skipping"
             continue
@@ -455,8 +393,11 @@ jobs:
               fi
 
               echo "Building FIP for version ${version} (SOC: $soc, model: $model_name, variant: $VARIANT)..."
-              BOARD="$model_name" VERSION=${version} VARIANT="$VARIANT" MULTI_LAYOUT="$MULTI_LAYOUT" FIXED_MTDPARTS="$FIXED_MTDPARTS" SILENT=Y ./build.sh 2>&1 | tee "output/build-${soc}-${model_name}-${version}-${VARIANT}.log"
-              build_rc=${PIPESTATUS[0]}
+              if make BOARD="$model_name" VERSION="$version" VARIANT="$VARIANT" MULTI_LAYOUT="$MULTI_LAYOUT" FIXED_MTDPARTS="$FIXED_MTDPARTS" SILENT=Y; then
+                build_rc=0
+              else
+                build_rc=$?
+              fi
 
               if [ "$build_rc" -ne 0 ]; then
                 echo "Build failed: soc=$soc model=$model_name version=$version variant=$VARIANT (rc=$build_rc), continuing to next"
