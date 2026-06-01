@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       MODEL:
-        description: 'Model selection (board name or "all")'
+        description: 'Model selection (board name, "all", or "all-mt7981/7986/7987/7988")'
         required: true
         default: 'all'
         type: string
@@ -141,10 +141,41 @@ jobs:
             exit 1
             ;;
         esac
-        if [ "$VARIANT_IN" = "all" ] && [ "$MODEL_IN" = "all" ]; then
-          echo "Error: VARIANT=all is only supported for single-model builds (MODEL must not be 'all')." >&2
+        if [ "$VARIANT_IN" = "all" ]; then
+          case "$MODEL_IN" in
+            all|all-mt7981|all-mt7986|all-mt7987|all-mt7988)
+              echo "Error: VARIANT=all is only supported for single-model builds (MODEL must be a specific board)." >&2
+              exit 1
+              ;;
+          esac
+        fi
+
+        # Keep the model selector flexible; invalid board names are resolved later
+        if [ -z "$MODEL_IN" ]; then
+          echo "Error: MODEL must not be empty." >&2
           exit 1
         fi
+
+        case "$MODEL_IN" in
+          all)
+            echo "MODEL_BUILD_SCOPE=all" >> "$GITHUB_ENV"
+            ;;
+          all-mt7981)
+            echo "MODEL_BUILD_SCOPE=mt7981" >> "$GITHUB_ENV"
+            ;;
+          all-mt7986)
+            echo "MODEL_BUILD_SCOPE=mt7986" >> "$GITHUB_ENV"
+            ;;
+          all-mt7987)
+            echo "MODEL_BUILD_SCOPE=mt7987" >> "$GITHUB_ENV"
+            ;;
+          all-mt7988)
+            echo "MODEL_BUILD_SCOPE=mt7988" >> "$GITHUB_ENV"
+            ;;
+          *)
+            echo "MODEL_BUILD_SCOPE=single" >> "$GITHUB_ENV"
+            ;;
+        esac
 
         # Validate FSTHEME
         case "$FSTHEME_IN" in
@@ -325,12 +356,31 @@ jobs:
         fi
 
         # Board selection
-        if [ "$CONFIG_MODEL" = "all" ]; then
-          config_apply "CONFIG_BUILD_ALL_BOARDS" "y"
-        else
-          config_apply "CONFIG_BUILD_ALL_BOARDS" "n"
-          # Individual board will be set via MODEL_LIST
-        fi
+        config_apply "CONFIG_BUILD_ALL_BOARDS" "n"
+        config_apply "CONFIG_BUILD_ALL_MT7981" "n"
+        config_apply "CONFIG_BUILD_ALL_MT7986" "n"
+        config_apply "CONFIG_BUILD_ALL_MT7987" "n"
+        config_apply "CONFIG_BUILD_ALL_MT7988" "n"
+        case "${MODEL_BUILD_SCOPE:-single}" in
+          all)
+            config_apply "CONFIG_BUILD_ALL_BOARDS" "y"
+            ;;
+          mt7981)
+            config_apply "CONFIG_BUILD_ALL_MT7981" "y"
+            ;;
+          mt7986)
+            config_apply "CONFIG_BUILD_ALL_MT7986" "y"
+            ;;
+          mt7987)
+            config_apply "CONFIG_BUILD_ALL_MT7987" "y"
+            ;;
+          mt7988)
+            config_apply "CONFIG_BUILD_ALL_MT7988" "y"
+            ;;
+          *)
+            # Individual board will be set via MODEL_LIST
+            ;;
+        esac
 
         # Variant selection
         config_apply "CONFIG_VARIANT_DEFAULT" "n"
@@ -460,13 +510,16 @@ jobs:
         fi
 
         MODEL_INPUT="$CONFIG_MODEL"
-        if [[ "$MODEL_INPUT" =~ ^all-(mt798[0-9]+)$ ]]; then
-          MODEL_INPUT="all"
-          if [ -z "$SOC_FILTER" ]; then
-            SOC_FILTER="${BASH_REMATCH[1]}"
-          fi
-          echo "Detected model input with platform filter: $SOC_FILTER (MODEL=all-mt798x)"
-        fi
+        case "$CONFIG_MODEL" in
+          all)
+            MODEL_INPUT="all"
+            ;;
+          all-mt7981|all-mt7986|all-mt7987|all-mt7988)
+            MODEL_INPUT="all"
+            SOC_FILTER="${CONFIG_MODEL#all-}"
+            echo "Detected model input with platform filter: $SOC_FILTER (MODEL=$CONFIG_MODEL)"
+            ;;
+        esac
 
         # Determine variant list
         VARIANT_INPUT="$CONFIG_VARIANT"
@@ -693,9 +746,11 @@ jobs:
           echo "- Build log enabled" >> release.txt
         fi
 
-        if [ "$CONFIG_MODEL" = "all" ]; then
-          echo "- Model list files for each version output (MODEL=all)" >> release.txt
-        fi
+        case "$CONFIG_MODEL" in
+          all|all-mt7981|all-mt7986|all-mt7987|all-mt7988)
+            echo "- Model list files for each version output (MODEL=$CONFIG_MODEL)" >> release.txt
+            ;;
+        esac
         echo "- Build time: ${{ env.FILE_DATE }}" >> release.txt
 
         echo "" >> release.txt
