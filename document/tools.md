@@ -28,7 +28,7 @@ BOARD=cmcc_a10 VERSION=SP2 MULTI_LAYOUT=1 ./build.sh
 BOARD=ruijie_rg-x60-new VERSION=SP1 MULTI_LAYOUT=1 SIMG=1 ./build.sh
 
 # clean build outputs
-CLEAN=1 VERSION=2025 ./build.sh
+./build.sh --clean
 ```
 
 ### build.sh key variables
@@ -40,8 +40,11 @@ CLEAN=1 VERSION=2025 ./build.sh
 - `FIXED_MTDPARTS=0|1`
 - `FSTHEME=bootstrap|gl|mtk`
 - `SIMG=0|1`
+- `UBIMNG=0|1` (enable UBI volume management in failsafe Web UI)
+- `TELNETD=0|1` (enable RFC 854 compliant telnet server)
 - `SILENT=Y|N`
 - `COPY_BL2=0|1`
+- `--clean` to clean build outputs
 
 ---
 

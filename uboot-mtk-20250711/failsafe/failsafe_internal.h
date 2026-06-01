@@ -15,6 +15,7 @@
 
 #include <net/mtk_httpd.h>
 #include <linux/types.h>
+#include "failsafe_helpers.h"
 
 size_t json_escape(char *dst, size_t dst_sz, const char *src);
 
@@ -52,6 +53,9 @@ void env_reset_handler(enum httpd_uri_handler_status status,
 void env_restore_handler(enum httpd_uri_handler_status status,
 	struct httpd_request *request,
 	struct httpd_response *response);
+void env_size_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
 void theme_get_handler(enum httpd_uri_handler_status status,
 	struct httpd_request *request,
 	struct httpd_response *response);
@@ -71,6 +75,36 @@ void backup_handler(enum httpd_uri_handler_status status,
 
 #ifdef CONFIG_WEBUI_FAILSAFE_FLASH
 void flash_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
+#endif
+
+#ifdef CONFIG_WEBUI_FAILSAFE_UBI
+void ubi_info_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
+void ubi_volumes_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
+void ubi_attach_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
+void ubi_detach_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
+void ubi_create_vol_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
+void ubi_remove_vol_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
+void ubi_rename_vol_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
+void ubi_mtd_list_handler(enum httpd_uri_handler_status status,
+	struct httpd_request *request,
+	struct httpd_response *response);
+void ubi_backup_handler(enum httpd_uri_handler_status status,
 	struct httpd_request *request,
 	struct httpd_response *response);
 #endif

@@ -19,16 +19,17 @@ U-Boot 2025 adds more features:
 - Theme manager
 - I18N support
 - Device reboot
+- UBI volume management
 
 ![Version-2025](document/pictures/uboot-2025.png)
 
 You can configure the features you need.
 
 - [x] MTK_DHCPD
-  - [x] MTK_DHCPD_ENHANCED
   - [x] MTK_DHCPD_USE_CONFIG_IP
   - MTK_DHCPD_POOL_START_HOST default 100
   - MTK_DHCPD_POOL_SIZE default 101
+- [ ] MTK_TELNETD
 - Failsafe Web UI style:
   - [x] WEBUI_FAILSAFE_UI_BOOTSTRAP
     - [x] WEBUI_FAILSAFE_I18N
@@ -41,6 +42,7 @@ You can configure the features you need.
   - [x] WEBUI_FAILSAFE_ENV - Enable environment manager
   - [x] WEBUI_FAILSAFE_CONSOLE - Enable web terminal
   - [x] WEBUI_FAILSAFE_FLASH - Enable flash editor
+  - [x] WEBUI_FAILSAFE_UBI - Enable UBI volume management
 
 ## Prepare
 
@@ -135,7 +137,9 @@ Other options:
 | FIXED_MTDPARTS | boolean | false | 1 | You can set FIXED_MTDPARTS=0 to make mtdparts editable, but it may cause some issues if you don't know what you are doing, so it's default to 1 to use fixed mtdparts.(Only for nand devices) |
 | FSTHEME | string | false | bootstrap | You can set FSTHEME=bootstrap/gl/mtk to change the failsafe web UI theme, bootstrap/gl/mtk |
 | SIMG | boolean | false | null | SIMG=1 means enable single image upgrade support in the failsafe web UI, but it may cause some issues if you don't know what you are doing, so it's default to 0 to disable it. |
-| CLEAN | boolean | false | null | You can set CLEAN=1 to clean the build environment before build |
+| UBIMNG | boolean | false | 0 | UBIMNG=1 enables UBI volume management in the failsafe web UI. Requires MTD device with UBI support. |
+| TELNETD | boolean | false | 0 | TELNETD=1 enables the RFC 854 compliant telnet server in failsafe mode. Provides U-Boot CLI access over TCP port 23. |
+| CLEAN | boolean | false | null | Pass `--clean` to clean the build environment before build |
 
 > CAN'T ENABLE MULTI_LAYOUT=1 and FIXED_MTDPARTS=0 at the same time
 

@@ -17,6 +17,8 @@
 .config.old
 .mconf-cfg
 *.configs
+boards.kconfig
+.tmp.defconfig
 asm-offsets.s
 lib.a
 httpd-fsdata.c

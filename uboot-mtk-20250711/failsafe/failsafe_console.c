@@ -44,18 +44,6 @@ static const char *failsafe_get_prompt(void)
 #endif
 }
 
-static void failsafe_webconsole_free_session(enum httpd_uri_handler_status status,
-	struct httpd_response *response)
-{
-	if (status != HTTP_CB_CLOSED)
-		return;
-
-	if (response->session_data) {
-		free(response->session_data);
-		response->session_data = NULL;
-	}
-}
-
 static int failsafe_webconsole_require_token(struct httpd_request *request,
 	struct httpd_response *response)
 {
@@ -148,7 +136,7 @@ void webconsole_poll_handler(enum httpd_uri_handler_status status,
 	size_t esc_sz, json_sz;
 
 	if (status == HTTP_CB_CLOSED) {
-		failsafe_webconsole_free_session(status, response);
+		failsafe_free_session(status, response);
 		return;
 	}
 
@@ -247,7 +235,7 @@ void webconsole_exec_handler(enum httpd_uri_handler_status status,
 	size_t esc_sz, json_sz;
 
 	if (status == HTTP_CB_CLOSED) {
-		failsafe_webconsole_free_session(status, response);
+		failsafe_free_session(status, response);
 		return;
 	}
 
@@ -365,7 +353,7 @@ void webconsole_clear_handler(enum httpd_uri_handler_status status,
 	char *json;
 
 	if (status == HTTP_CB_CLOSED) {
-		failsafe_webconsole_free_session(status, response);
+		failsafe_free_session(status, response);
 		return;
 	}
 
